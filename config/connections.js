@@ -65,6 +65,15 @@ module.exports.connections = {
     database: 'hack-whatsapp'
   },
 
+  herokuMongo: {
+      adapter: 'sails-mongo',
+      host: 'ds045252.mongolab.com',
+      port: 45252,
+      user: 'heroku_kbplvgqt',
+      password: 'u39putl50h4i3thqvgful3l894',
+      database: 'heroku_kbplvgqt'
+  },
+
   /***************************************************************************
   *                                                                          *
   * PostgreSQL is another officially supported relational database.          *
