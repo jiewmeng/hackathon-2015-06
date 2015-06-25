@@ -31,6 +31,11 @@ module.exports = {
 
 		topic: {
 			model: 'Topics'
+		},
+
+		cue: {
+			type: 'integer',
+			defaultsTo: -1
 		}
 
 	},

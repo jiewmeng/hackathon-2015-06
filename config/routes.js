@@ -36,12 +36,17 @@ module.exports.routes = {
         view: 'homepage'
     },
 
-    '/whatsapp/online': 'WhatsAppController.online',
-    '/whatsapp/offline': 'WhatsAppController.offline',
+    'GET /whatsapp/online': 'WhatsAppController.online',
+    'GET /whatsapp/offline': 'WhatsAppController.offline',
 
-    '/topics': 'TopicsController.getAll',
-    '/recent': 'CardsController.getRecent',
-    '/topics/:topicId/cards': 'CardsController.getByTopic',
+    'GET /topics': 'TopicsController.getAll',
+    'GET /recent': 'CardsController.getRecent',
+    'GET /topics/:topicId/cards': 'CardsController.getByTopic',
+    'DELETE /cards/:cardId': 'CardsController.delete',
+    'DELETE /topics/:topicId': 'TopicsController.delete',
+    'PUT /cards/:cardId/cue': 'CardsController.cue',
+
+    'GET /cues': 'CuesController.getList',
 
 
   /***************************************************************************
