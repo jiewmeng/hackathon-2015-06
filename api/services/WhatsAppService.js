@@ -111,7 +111,7 @@ module.exports = {
 		var self = this;
 		var indexOfOptions = message.body.search(/(\s-c(\s|$)|(\s-t\s))/);
 		var optionsStr = message.body.substr(indexOfOptions);
-		var name = indexOfOptions > -1 ? message.body.substr(1, message.body.search(/(\s-c(\s|$)|(\s-t\s))/)).trim() : message.body.substr(1);
+		var name = indexOfOptions > -1 ? message.body.substr(1, message.body.search(/\s/)).trim() : message.body.substr(1);
 		var fromNum = message.from.substring(0, message.from.indexOf('@'));
 		var merging = 0;
 		var topic;
@@ -168,8 +168,6 @@ module.exports = {
 				if (cueMatch instanceof Array && cueMatch.length > 1) {
 					var cueTimeStr = cueMatch[1].toLowerCase().trim();
 					var cueTime = -1;
-
-					console.log('cueTimeStr is ' + cueTimeStr);
 
 					if (cueTimeStr == 'soon') {
 						cueTime = Date.now() + ONE_MINUTE;
