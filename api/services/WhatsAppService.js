@@ -136,7 +136,6 @@ module.exports = {
 	},
 
 	_handleNewTextCard: function(message) {
-		console.log(message);
 		var self = this;
 		var card = {
 			type: 'text',
