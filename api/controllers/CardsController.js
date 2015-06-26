@@ -49,7 +49,7 @@ module.exports = {
 
 	cue: function(req, res) {
 		var cardId = req.params.cardId;
-		var cue = parseInt(req.body.cue, 10);
+		var cue = parseInt(req.params.cue || req.body.cue, 10);
 		var update;
 
 		if (cue > 0) {
