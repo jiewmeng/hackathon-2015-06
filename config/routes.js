@@ -44,7 +44,7 @@ module.exports.routes = {
     'GET /topics/:topicId/cards': 'CardsController.getByTopic',
     'DELETE /cards/:cardId': 'CardsController.delete',
     'DELETE /topics/:topicId': 'TopicsController.delete',
-    'PUT /cards/:cardId/cue/:date': 'CardsController.cue',
+    'PUT /cards/:cardId/cue/:cue': 'CardsController.cue',
 
     'GET /cues': 'CuesController.getList',
 
