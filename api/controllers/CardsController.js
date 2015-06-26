@@ -1,3 +1,5 @@
+var Promise = require('bluebird');
+
 module.exports = {
 	getRecent: function(req, res) {
 		Cards.find({sort: 'createdAt DESC', limit: 30})
@@ -17,15 +19,25 @@ module.exports = {
 
 	getByTopic: function(req, res) {
 		var topicId = req.params.topicId;
-		Cards.find({
-			where: { topic: topicId },
-			sort: 'createdAt DESC'
-		})
-			.then(function(cards) {
-				res.json(cards.map(function(card) {
+		Promise.all([
+			Cards.find({
+				where: { topic: topicId },
+				sort: 'createdAt DESC'
+			}),
+			Cards.find({
+				where: { topic: topicId, cue: { '>': 0 } },
+				sort: 'cue ASC'
+			})
+		])
+			.spread(function(cards, cues) {
+				var cardTransform = function(card) {
 					var obj = _.pick(card, ['id', 'type', 'content', 'image', 'datetime', 'cue']);
 					return obj;
-				}));
+				};
+				res.json({
+					cards: cards.map(cardTransform),
+					cues: cues.map(cardTransform)
+				});
 			})
 			.catch(function(err) {
 				console.error('Failed to get cards by topic', err);
