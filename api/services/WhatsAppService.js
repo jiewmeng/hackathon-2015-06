@@ -52,7 +52,24 @@ module.exports = {
 		sails.config.waOnline = false;
 	},
 
+	_sendMessage: function(destNum, message) {
+		return new Promise(function(resolve, reject) {
+			var wa = sails.config.wa;
+
+			wa.sendComposingState(destNum);
+			setTimeout(function() {
+				wa.sendPausedState(destNum);
+
+				wa.sendMessage(destNum, message, function(err, id) {
+					if (err) return reject(err.message);
+					resolve();
+				});
+			}, 1000);
+		});
+	},
+
 	_associateTopicLatestCard: function(topicId) {
+		var self = this;
 		return Cards.findOne({
 			where: { topic: topicId },
 			sort: 'createdAt DESC',
@@ -63,6 +80,7 @@ module.exports = {
 			})
 			.then(function(topic) {
 				console.log('Associated topic latest card', topic);
+				// return self._sendMessage()
 			})
 			.catch(function(err) {
 				console.error('Failed to associate topic latest card', err);
@@ -70,7 +88,9 @@ module.exports = {
 			});
 	},
 
-	_createCard: function(card) {
+	_createCard: function(card, from) {
+		card.from = from.substring(0, from.indexOf('@'));
+
 		return Cards.create(card)
 			.then(function(card) {
 				console.log('Create card success:', card);
@@ -83,19 +103,31 @@ module.exports = {
 	_handleTopicMessage: function(message) {
 		var self = this;
 		var name = message.body.substring(1);
+		var fromNum = message.from.substring(0, message.from.indexOf('@'));
 		Topics.findOrCreate({
 			name: name
 		})
 			.then(function(topic) {
-
 				// associate past untagged messages with project
-				return Cards.update({ topic: sails.config.defaultTopicId }, { topic: topic });
+				return Cards.update({
+					topic: sails.config.defaultTopicId,
+					from: fromNum
+				}, { topic: topic });
 			})
 			.then(function(cards) {
-				console.log('Associated cards with topic ' + name, cards);
-				return cards[0].topic;
+				if (cards.length > 0) {
+					return Promise.all([
+						cards[0].topic,
+						self._sendMessage(fromNum, 'Associated ' + cards.length + ' card(s) with topic "' + name + '"')
+					]);
+				}
+				return Promise.all([
+					false,
+					self._sendMessage(fromNum, 'Nothing to associate with topic!')
+				]);
 			})
-			.then(function(topicId) {
+			.spread(function(topicId) {
+				if (!topicId) return;
 				return self._associateTopicLatestCard(topicId);
 			})
 			.catch(function(err) {
@@ -104,6 +136,7 @@ module.exports = {
 	},
 
 	_handleNewTextCard: function(message) {
+		console.log(message);
 		var self = this;
 		var card = {
 			type: 'text',
@@ -112,7 +145,7 @@ module.exports = {
 			datetime: new Date(message.date).getTime(),
 			// topic: defaultTopicId
 		};
-		self._createCard(card);
+		self._createCard(card, message.from);
 	},
 
 	attachOnMessage: function() {
@@ -138,7 +171,7 @@ module.exports = {
 				datetime: new Date(message.date).getTime(),
 				// topic: defaultTopicId
 			};
-			self._createCard(card);
+			self._createCard(card, message.from);
 		});
 	}
 };

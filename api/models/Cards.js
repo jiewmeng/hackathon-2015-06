@@ -36,6 +36,11 @@ module.exports = {
 		cue: {
 			type: 'integer',
 			defaultsTo: -1
+		},
+
+		from: {
+			type: 'string',
+			required: true
 		}
 
 	},
