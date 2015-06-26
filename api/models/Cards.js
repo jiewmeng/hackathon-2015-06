@@ -2,10 +2,7 @@ module.exports = {
 	attributes: {
 
 		whatsAppId: {
-			type: 'string',
-			unique: true,
-			required: true,
-			index: true
+			type: 'string'
 		},
 
 		type: {

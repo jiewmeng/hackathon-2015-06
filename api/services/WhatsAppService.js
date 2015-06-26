@@ -100,14 +100,67 @@ module.exports = {
 			});
 	},
 
+	/**
+	 * #Tag Here!!! -c -t tomorrow
+	 */
 	_handleTopicMessage: function(message) {
 		var self = this;
-		var name = message.body.substring(1);
+		var indexOfOptions = message.body.search(/(\s-c(\s|$)|(\s-t\s))/);
+		var name = indexOfOptions > -1 ? message.body.substr(1, message.body.search(/(\s-c(\s|$)|(\s-t\s))/)).trim() : message.body.substr(1);
 		var fromNum = message.from.substring(0, message.from.indexOf('@'));
+		var merging = 0;
+		var topic;
+
+		console.log('Find or add topic', name);
 		Topics.findOrCreate({
 			name: name
 		})
-			.then(function(topic) {
+			.then(function(t) {
+				topic = t;
+				// handle consolidate
+				var consolidateMatch = (message.body.search(/\s-c(\s|$)/) > -1);
+				if (!consolidateMatch) {
+					return;
+				}
+				return Cards.find({
+					where: {
+						topic: sails.config.defaultTopicId,
+						from: fromNum
+					},
+					sort: 'createdAt ASC'
+				})
+					.then(function(cards) {
+						merging = cards.length;
+
+						var newContent = cards.map(function(card) {
+							return card.content;
+						}).join('. ');
+
+						return Promise.all([
+							newContent,
+							Cards.destroy({id: _.pluck(cards, 'id')})
+						]);
+					})
+					.spread(function(newContent) {
+						return Cards.create({
+							type: 'text',
+							content: newContent,
+							from: fromNum,
+							topic: sails.config.defaultTopicId,
+							datetime: Date.now()
+						});
+					})
+					.then(function(card) {
+						return self._sendMessage(fromNum, 'Merged ' + merging + ' card(s)');
+					})
+					.catch(function(err) {
+						throw err;
+					});
+			})
+			.then(function() {
+
+				// you will get the cue on
+
 				// associate past untagged messages with project
 				return Cards.update({
 					topic: sails.config.defaultTopicId,
@@ -118,7 +171,7 @@ module.exports = {
 				if (cards.length > 0) {
 					return Promise.all([
 						cards[0].topic,
-						self._sendMessage(fromNum, 'Associated ' + cards.length + ' card(s) with topic "' + name + '"')
+						self._sendMessage(fromNum, 'Added ' + cards.length + ' card(s) to topic "' + name + '"')
 					]);
 				}
 				return Promise.all([
@@ -132,6 +185,7 @@ module.exports = {
 			})
 			.catch(function(err) {
 				console.error('Failed to handle topic message', err);
+				console.error(err.stack);
 			});
 	},
 
