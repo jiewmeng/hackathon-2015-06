@@ -134,7 +134,7 @@ module.exports = {
 
 						var newContent = cards.map(function(card) {
 							return card.content;
-						}).join('. ');
+						}).join('\n ');
 
 						return Promise.all([
 							newContent,
