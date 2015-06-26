@@ -1,6 +1,10 @@
 var whatsapi = require('whatsapi');
 var Promise = require('bluebird');
 
+var ONE_MINUTE = 60 * 1000;
+var ONE_HOUR = 60 * ONE_MINUTE;
+var ONE_DAY = 24 * ONE_HOUR;
+
 module.exports = {
 	connect: function() {
 		var self = this;
@@ -106,12 +110,12 @@ module.exports = {
 	_handleTopicMessage: function(message) {
 		var self = this;
 		var indexOfOptions = message.body.search(/(\s-c(\s|$)|(\s-t\s))/);
+		var optionsStr = message.body.substr(indexOfOptions);
 		var name = indexOfOptions > -1 ? message.body.substr(1, message.body.search(/(\s-c(\s|$)|(\s-t\s))/)).trim() : message.body.substr(1);
 		var fromNum = message.from.substring(0, message.from.indexOf('@'));
 		var merging = 0;
 		var topic;
 
-		console.log('Find or add topic', name);
 		Topics.findOrCreate({
 			name: name
 		})
@@ -160,7 +164,49 @@ module.exports = {
 			.then(function() {
 
 				// you will get the cue on
+				var cueMatch = /\s-t\s(.*)/.exec(optionsStr);
+				if (cueMatch instanceof Array && cueMatch.length > 1) {
+					var cueTimeStr = cueMatch[1].toLowerCase().trim();
+					var cueTime = -1;
 
+					console.log('cueTimeStr is ' + cueTimeStr);
+
+					if (cueTimeStr == 'soon') {
+						cueTime = Date.now() + ONE_MINUTE;
+					} else if (cueTimeStr == 'tomorrow') {
+						cueTime = Date.now() + ONE_DAY;
+					} else if (cueTimeStr == 'next week') {
+						cueTime = Date.now() + ONE_DAY * 7;
+					} else {
+						var cueDetailsMatch = /(\d+) (mins?|hours?|days?|weeks?|months?)/.exec(cueTimeStr);
+						if (!(cueDetailsMatch instanceof Array) || cueDetailsMatch.length != 3) {
+							return;
+						}
+						var cueNum = parseInt(cueDetailsMatch[1], 10);
+						var cueDuration = cueDetailsMatch[2];
+
+						if (cueDuration.indexOf('min') > -1) {
+							cueTime = Date.now() + (cueNum * ONE_MINUTE);
+						} else if (cueDuration.indexOf('hour') > -1) {
+							cueTime = Date.now() + (cueNum * ONE_HOUR);
+						} else if (cueDuration.indexOf('day') > -1) {
+							cueTime = Date.now() + (cueNum * ONE_DAY);
+						} else if (cueDuration.indexOf('week') > -1) {
+							cueTime = Date.now() + (cueNum * 7 * ONE_DAY);
+						} else if (cueDuration.indexOf('month') > -1) {
+							cueTime = Date.now() + (cueNum * 30 * ONE_DAY);
+						}
+					}
+
+					if (cueTime > -1) {
+						return Cards.update({
+							topic: sails.config.defaultTopicId,
+							from: fromNum
+						}, { cue: cueTime });
+					}
+				}
+			})
+			.then(function() {
 				// associate past untagged messages with project
 				return Cards.update({
 					topic: sails.config.defaultTopicId,
@@ -171,7 +217,8 @@ module.exports = {
 				if (cards.length > 0) {
 					return Promise.all([
 						cards[0].topic,
-						self._sendMessage(fromNum, 'Added ' + cards.length + ' card(s) to topic "' + name + '"')
+						self._sendMessage(fromNum, 'Added ' + cards.length + ' card(s) to topic "' + name + '"'),
+						(cards[0].cue > -1) ? self._sendMessage(fromNum, 'You will get the cue on ' + (new Date(cards[0].cue).toString())) : false
 					]);
 				}
 				return Promise.all([
@@ -181,6 +228,7 @@ module.exports = {
 			})
 			.spread(function(topicId) {
 				if (!topicId) return;
+
 				return self._associateTopicLatestCard(topicId);
 			})
 			.catch(function(err) {
